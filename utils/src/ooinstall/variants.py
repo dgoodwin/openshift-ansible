@@ -11,12 +11,31 @@ to be specified by the user, and to point the generic variants to the latest
 version.
 """
 
+import os.path
+import urlparse
+
+DOCS_BASE_URL = "http://docs.openshift.com"
+
 
 class Version(object):
-    def __init__(self, name, ansible_key):
+    def __init__(self, name, ansible_key, docs_dir=None):
         self.name = name  # i.e. 3.0, 3.1
 
         self.ansible_key = ansible_key
+
+        # i.e. /enterprise/3.0/
+        self.docs_dir = docs_dir
+
+    def get_docs_url(self, path):
+        """
+        Returns a URL pointing to the correct version of the docs for this
+        variant and version.
+        """
+        # path must not start with a leading / or this all gets confused:
+        if path[0] == '/':
+            path = path[1:]
+        filepath = os.path.join(self.docs_dir, path)
+        return urlparse.urljoin(DOCS_BASE_URL, filepath)
 
 
 class Variant(object):
@@ -36,14 +55,15 @@ class Variant(object):
 # WARNING: Keep the versions ordered, most recent last:
 OSE = Variant('openshift-enterprise', 'OpenShift Enterprise',
     [
-        Version('3.0', 'enterprise'),
-        Version('3.1', 'openshift-enterprise')
+        Version('3.0', 'enterprise', docs_dir='/enterprise/3.0/'),
+        Version('3.1', 'openshift-enterprise', docs_dir='/enterprise/3.1/'),
     ]
 )
 
 AEP = Variant('atomic-enterprise', 'Atomic Enterprise Platform',
     [
-        Version('3.1', 'atomic-enterprise')
+        # TODO: Does atomic have a separate docs dir?
+        Version('3.1', 'atomic-enterprise', docs_dir='/enterprise/3.1/'),
     ]
 )
 

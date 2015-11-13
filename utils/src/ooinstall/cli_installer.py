@@ -71,7 +71,7 @@ def delete_hosts(hosts):
                 click.echo("\"{}\" doesn't coorespond to any valid input.".format(del_idx))
     return hosts, None
 
-def collect_hosts():
+def collect_hosts(oo_cfg):
     """
         Collect host information from user. This will later be filled in using
         ansible.
@@ -94,10 +94,14 @@ after installation with 'oadm manage-node'.
 The OpenShift Node provides the runtime environments for containers.  It will
 host the required services to be managed by the Master.
 
-http://docs.openshift.com/enterprise/latest/architecture/infrastructure_components/kubernetes_infrastructure.html#master
-http://docs.openshift.com/enterprise/latest/architecture/infrastructure_components/kubernetes_infrastructure.html#node
+%s
+%s
     """
-    click.echo(message)
+    master_docs = '/architecture/infrastructure_components/kubernetes_infrastructure.html#master'
+    node_docs = '/architecture/infrastructure_components/kubernetes_infrastructure.html#node'
+    version = oo_cfg.get_variant_version()[1]
+    click.echo(message % (version.get_docs_url(master_docs),
+        version.get_docs_url(node_docs)))
 
     hosts = []
     more_hosts = True
@@ -261,6 +265,13 @@ def get_missing_info_from_user(oo_cfg):
     """ Prompts the user for any information missing from the given configuration. """
     click.clear()
 
+    # Find out what variant/version we're installing first:
+    if oo_cfg.settings.get('variant', '') == '':
+        variant, version = get_variant_and_version()
+        oo_cfg.settings['variant'] = variant.name
+        oo_cfg.settings['variant_version'] = version.name
+        click.clear()
+
     message = """
 Welcome to the OpenShift Enterprise 3 installation.
 
@@ -279,9 +290,11 @@ and Nodes.  For ongoing environment maintenance it's recommended that the
 official Ansible playbooks be used.
 
 For more information on installation prerequisites please see:
-https://docs.openshift.com/enterprise/latest/admin_guide/install/prerequisites.html
+%s
 """
-    confirm_continue(message)
+    version = oo_cfg.get_variant_version()[1]
+    confirm_continue(message % version.get_docs_url(
+        '/admin_guide/install/prerequisites.html'))
     click.clear()
 
     if oo_cfg.settings.get('ansible_ssh_user', '') == '':
@@ -289,26 +302,20 @@ https://docs.openshift.com/enterprise/latest/admin_guide/install/prerequisites.h
         click.clear()
 
     if not oo_cfg.hosts:
-        oo_cfg.hosts = collect_hosts()
-        click.clear()
-
-    if oo_cfg.settings.get('variant', '') == '':
-        variant, version = get_variant_and_version()
-        oo_cfg.settings['variant'] = variant.name
-        oo_cfg.settings['variant_version'] = version.name
+        oo_cfg.hosts = collect_hosts(oo_cfg)
         click.clear()
 
     return oo_cfg
 
 
-def collect_new_nodes():
+def collect_new_nodes(oo_cfg):
     click.clear()
     click.echo('***New Node Configuration***')
     message = """
 Add new nodes here
     """
     click.echo(message)
-    return collect_hosts()
+    return collect_hosts(oo_cfg)
 
 def get_installed_hosts(hosts, callback_facts):
     installed_hosts = []
@@ -377,7 +384,7 @@ def get_hosts_to_run_on(oo_cfg, callback_facts, unattended, force, verbose):
                     sys.exit(1)
             else:
                 if not force:
-                    new_nodes = collect_new_nodes()
+                    new_nodes = collect_new_nodes(oo_cfg)
 
                     hosts_to_run_on.extend(new_nodes)
                     oo_cfg.hosts.extend(new_nodes)
@@ -431,7 +438,8 @@ def get_hosts_to_run_on(oo_cfg, callback_facts, unattended, force, verbose):
 # Main CLI entrypoint, not much we can do about too many arguments.
 def cli(ctx, unattended, configuration, ansible_playbook_directory, ansible_config, ansible_log_path, verbose):
     """
-    atomic-openshift-installer makes the process for installing OSE or AEP easier by interactively gathering the data needed to run on each host.
+    atomic-openshift-installer makes the process for installing OSE or AEP
+    easier by interactively gathering the data needed to run on each host.
     It can also be run in unattended mode if provided with a configuration file.
 
     Further reading: https://docs.openshift.com/enterprise/latest/install_config/install/quick_install.html
@@ -458,7 +466,8 @@ def cli(ctx, unattended, configuration, ansible_playbook_directory, ansible_conf
 
     if ctx.obj['ansible_config']:
         oo_cfg.settings['ansible_config'] = ctx.obj['ansible_config']
-    elif os.path.exists(DEFAULT_ANSIBLE_CONFIG):
+    elif 'ansible_config' not in oo_cfg.settings and \
+        os.path.exists(DEFAULT_ANSIBLE_CONFIG):
         # If we're installed by RPM this file should exist and we can use it as our default:
         oo_cfg.settings['ansible_config'] = DEFAULT_ANSIBLE_CONFIG
 
@@ -574,7 +583,7 @@ If changes are needed to the values recorded by the installer please update {}.
         confirm_continue(message)
 
     error = openshift_ansible.run_main_playbook(oo_cfg.hosts,
-                                                   hosts_to_run_on, verbose)
+                                                hosts_to_run_on, verbose)
     if error:
         # The bootstrap script will print out the log location.
         message = """
@@ -591,9 +600,10 @@ If this is your first time installing please take a look at the Administrator
 Guide for advanced options related to routing, storage, authentication and much
 more:
 
-http://docs.openshift.com/enterprise/latest/admin_guide/overview.html
+%s
 """
-        click.echo(message)
+        version = oo_cfg.get_variant_version()[1]
+        click.echo(message % version.get_docs_url('/admin_guide/overview.html'))
         click.pause()
 
 cli.add_command(install)

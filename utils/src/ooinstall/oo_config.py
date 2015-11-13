@@ -6,6 +6,8 @@ import os
 import yaml
 from pkg_resources import resource_filename
 
+from ooinstall.variants import find_variant
+
 PERSIST_SETTINGS = [
     'ansible_ssh_user',
     'ansible_config',
@@ -216,3 +218,11 @@ class OOConfig(object):
             if host.connect_to == name:
                 return host
         return None
+
+    def get_variant_version(self):
+        """ Find the variant and version objects for the current configuration. """
+        if 'variant' not in self.settings:
+            return None, None
+
+        return find_variant(self.settings['variant'],
+            version=self.settings.get('variant_version', None))
