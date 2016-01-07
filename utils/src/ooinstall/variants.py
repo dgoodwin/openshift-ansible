@@ -47,8 +47,14 @@ AEP = Variant('atomic-enterprise', 'Atomic Enterprise Platform',
     ]
 )
 
+origin = Variant('origin', 'OpenShift Origin',
+    [
+        Version('1.1', 'origin')
+    ]
+)
+
 # Ordered list of variants we can install, first is the default.
-SUPPORTED_VARIANTS = (OSE, AEP)
+SUPPORTED_VARIANTS = (OSE, AEP, origin)
 
 
 def find_variant(name, version=None):
@@ -74,4 +80,3 @@ def get_variant_version_combos():
         for ver in variant.versions:
             combos.append((variant, ver))
     return combos
-
