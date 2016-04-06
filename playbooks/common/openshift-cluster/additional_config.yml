@@ -35,6 +35,7 @@
 - name: Create persistent volumes and create hosted services
   hosts: oo_first_master
   vars:
+    registry_storage_kind: "{{ openshift.hosted.registry.storage.kind }}"
     attach_registry_volume: "{{ openshift.hosted.registry.storage.kind != None }}"
     deploy_infra: "{{ openshift.master.infra_nodes | default([]) | length > 0 }}"
     persistent_volumes: "{{ hostvars[groups.oo_first_master.0] | oo_persistent_volumes(groups) }}"

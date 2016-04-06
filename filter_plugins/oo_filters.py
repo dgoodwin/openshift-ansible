@@ -613,6 +613,9 @@ class FilterModule(object):
                                 server=host,
                                 path=path)))
                     persistent_volumes.append(persistent_volume)
+                elif kind == 's3':
+                    # Nothing to do, but it's a valid option.
+                    pass
                 else:
                     msg = "|failed invalid storage kind '{0}' for component '{1}'".format(
                         kind,

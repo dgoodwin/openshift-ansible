@@ -22,3 +22,13 @@
     --add --overwrite -t persistentVolumeClaim --claim-name={{ registry_volume_claim }}
     --name=registry-storage
   when: not volume_attached | bool
+
+- include: s3.yml
+  when: registry_storage_kind == 's3'
+  vars:
+    # TODO: default these to the cloudprovider variables if unset.
+    # TODO: error out if neither is set
+    aws_access_key: "{{ openshift.hosted.registry.s3.access.key }}"
+    aws_secret_key: "{{ openshift.hosted.registry.s3.secret.key }}"
+    aws_bucket_name: "{{ openshift.hosted.registry.s3.bucket }}"
+

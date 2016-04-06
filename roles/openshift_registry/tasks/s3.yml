@@ -1,0 +1,19 @@
+---
+- debug:
+    var: openshift.hosted.registry.secured
+- debug:
+    var: openshift.hosted.registry.s3.access.key
+- debug:
+    var: openshift.hosted.registry.s3.bucket
+- debug:
+    var: aws_bucket_name
+
+- name: Create S3 bucket
+  local_action:
+    module: s3
+    bucket: "{{ aws_bucket_name }}"
+    mode: create
+  run_once: True
+
+- fail: yeah we got here
+
