@@ -8,12 +8,12 @@
 - debug:
     var: aws_bucket_name
 
-- name: Create S3 bucket
-  local_action:
-    module: s3
-    bucket: "{{ aws_bucket_name }}"
-    mode: create
-  run_once: True
+# TODO: fails, possibly due to permissions, possibly due to bucket already existing.
+#- name: Create S3 bucket
+  #local_action:
+    #module: s3
+    #bucket: "{{ aws_bucket_name }}"
+    #mode: create
+  #run_once: True
 
-- fail: yeah we got here
 

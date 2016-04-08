@@ -1,0 +1,19 @@
+---
+# TODO: lookup the service IP
+
+# TODO: This overwrites pre-existing cert and key, is this desirable? Probably not.
+- stat:
+    path: "{{ registry_crt }}"
+  register: registry_crt_file
+- name: Generate registry certificate
+  command: >
+    {{ openshift.common.admin_binary }} ca create-server-cert
+      --cert={{ registry_crt }}
+      --key={{ registry_key }}
+      --overwrite=true
+      --hostnames={{ registry_hostname }}
+      --signer-cert={{ openshift_master_ca_cert }}
+      --signer-key={{ openshift_master_ca_key }}
+      --signer-serial={{ openshift_master_ca_serial }}
+  when: not registry_crt_file.stat.exists
+
