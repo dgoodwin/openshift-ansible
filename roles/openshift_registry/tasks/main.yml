@@ -42,7 +42,7 @@
   when: openshift_hosted_registry_secured | bool
   vars:
     # TODO: Is this a safe assumption for a default?
-    registry_hostname: docker-registry.default.svc.cluster.local
+    registry_hostname: "docker-registry.default.svc.cluster.local"
     # What is a more appropriate way to get these variables defined and still be a reusable role?
     openshift_generated_configs_dir: "{{ openshift.common.config_base }}/generated-configs"
     openshift_master_ca_cert: "{{ openshift.common.config_base }}/master/ca.crt"
@@ -50,3 +50,4 @@
     openshift_master_ca_serial: "{{ openshift.common.config_base }}/master/ca.serial.txt"
     registry_crt: "{{ openshift_generated_configs_dir }}/registry.crt"
     registry_key: "{{ openshift_generated_configs_dir }}/registry.key"
+    registry_secret: "registry-secret"

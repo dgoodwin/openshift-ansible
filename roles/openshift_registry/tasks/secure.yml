@@ -1,10 +1,15 @@
 ---
 # TODO: lookup the service IP
 
-# TODO: This overwrites pre-existing cert and key, is this desirable? Probably not.
-- stat:
+- name: Check if registry cert exists
+  stat:
     path: "{{ registry_crt }}"
   register: registry_crt_file
+- name: Check if registry key exists
+  stat:
+    path: "{{ registry_key }}"
+  register: registry_key_file
+
 - name: Generate registry certificate
   command: >
     {{ openshift.common.admin_binary }} ca create-server-cert
@@ -15,5 +20,47 @@
       --signer-cert={{ openshift_master_ca_cert }}
       --signer-key={{ openshift_master_ca_key }}
       --signer-serial={{ openshift_master_ca_serial }}
-  when: not registry_crt_file.stat.exists
+  when: not registry_crt_file.stat.exists and not registry_key_file.stat.exists
+  register: gen_certs
 
+- name: Check if registry secret already exists
+  command: "{{ openshift.common.client_binary }} get secret {{ registry_secret }}"
+  register: secret_exists
+
+- name: Delete old secret
+  command: "{{ openshift.common.client_binary }} delete secret {{ registry_secret }}"
+  when: "gen_certs.changed and 'not found' not in secret_exists.stdout"
+  register: del_secret
+
+# TODO: recreate secret if it already exists, but we just made new certs
+- name: Create registry secret
+  command: "{{ openshift.common.client_binary }} secrets new {{ registry_secret }} {{ registry_crt }} {{ registry_key }}"
+  when: "'not found' in secret_exists.stdout or del_secret.changed"
+
+# TODO: ops playbook uses a separate SA, recreated in registry playbook, should we as well and add secret to that?
+- name: Add registry secret to default service account
+  command: "{{ openshift.common.client_binary }} secrets add serviceaccounts/default secrets/{{ registry_secret }}"
+
+- name: Determine if secrets volume is already attached to dc/docker-registry
+  command: "{{ openshift.common.client_binary }} get -o template dc/docker-registry --template=\\{\\{.spec.template.spec.volumes\\}\\}"
+  changed_when: false
+  register: secret_volumes_output
+
+- set_fact:
+    secrets_volume_attached: "{{ registry_secret in secret_volumes_output.stdout }}"
+
+# Do we need to add it if it exists but just changed?
+- name: Add secrets volume to registry deployment config
+  command: >
+    {{ openshift.common.client_binary }} volume dc/docker-registry
+      --add
+      --type=secret
+      --secret-name={{ registry_secret }}
+      -m /etc/secrets
+  when: not secrets_volume_attached
+
+- name: Enable registry TLS by setting environment variables
+  command: >
+    {{ openshift.common.client_binary }} env dc/docker-registry
+      REGISTRY_HTTP_TLS_CERTIFICATE=/etc/secrets/registry.crt
+      REGISTRY_HTTP_TLS_KEY=/etc/secrets/registry.key
